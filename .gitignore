@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Docker data volumes
+prometheus_data/
+grafana_data/
