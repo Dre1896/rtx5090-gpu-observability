@@ -9,16 +9,16 @@ A containerized GPU telemetry pipeline built on the same monitoring primitives t
 
 ![RTX 5090 GPU Observability Dashboard](assets/full_dashboard.png)
 
-## Why This Exists
+## Why this exists
 
-GPU utilization, thermal behavior, power draw, and memory pressure are usually invisible unless something breaks. This project makes them visible and queryable in real time because this is the same category of tooling that underflies fleet-scale GPU health monitoring in HPC and datacenter environments, scoped down to a single-node deployment.
+GPU utilization, thermal behavior, power draw, and memory pressure are usually invisible unless something breaks. This project makes them visible and queryable in real time, because it's the same category of tooling that underlies fleet-scale GPU health monitoring in HPC and datacenter environments, scoped down to a single-node deployment.
 
-My goal wasn’t just to plot numbers. It was to build a stack that:
-Correlates compute load with hardware response (utilization → temperature → power draw, observed together, not in isolation)
-Surfaces health signals proactively (thermal thresholds, XID fault detection) rather than requiring someone to go looking for problems
-Runs identically on any machine with an NVIDIA GPU, via Docker, with zero manual configuration beyond docker-compose up
+My goal wasn't just to plot numbers. I wanted a stack that:
+- Correlates compute load with hardware response (utilization, temperature, power draw, observed together, not in isolation)
+- Surfaces health signals proactively (thermal thresholds, XID fault detection) instead of requiring someone to go looking for problems
+- Runs identically on any machine with an NVIDIA GPU, via Docker, with zero manual configuration beyond `docker-compose up`
 
-## Architecture 
+## Architecture
 
 ![GPU Observability Architecture](assets/gpu_observability_architecture.png)
 
@@ -35,69 +35,51 @@ Prometheus              — scrapes, timestamps, and stores metrics as a queryab
 Grafana                 — queries Prometheus, renders dashboards, evaluates thresholds
 ```
 
-Why this layering matters: DCGM Exporter is stateless so it reports the instantaneous value of a metric and nothing else. Prometheus is what introduces history: on every scrape, it timestamps and persists the value, which is what allows Grafana to render a trend line instead of a single flat number. Grafana itself holds none of the data, it’s a pure query-and-render layer on top of Prometheus.
+Why this layering matters: DCGM Exporter is stateless, so it reports the instantaneous value of a metric and nothing else. Prometheus is what introduces history: on every scrape, it timestamps and persists the value, which is what lets Grafana render a trend line instead of a single flat number. Grafana holds none of the data itself, it's a pure query-and-render layer on top of Prometheus.
 
-The entire stack is defined in docker-compose.yml, making the deployment portable across any laptop or workstation with an NVIDIA GPU and driver support so there is no environment specific setup required. 
+The entire stack is defined in `docker-compose.yml`, making the deployment portable across any laptop or workstation with an NVIDIA GPU and driver support. No environment-specific setup required.
 
-## Tech Stack
-Component
-Role
-NVIDIA DCGM
-Datacenter GPU Manager — the same telemetry/health/diagnostics library NVIDIA uses for cluster-scale GPU fleet management, running here against a single GPU
-DCGM Exporter
-Exposes live DCGM metrics as a Prometheus-scrapable HTTP endpoint
-Prometheus
-Time-series database; scrapes, stores, and queries all historical metric data
-Grafana
-Visualization and dashboarding layer; threshold evaluation and alerting UI
-Docker Compose
-Orchestrates the full stack as a single reproducible deployment
+## Tech stack
 
+| Component | Role |
+|---|---|
+| **NVIDIA DCGM** | Datacenter GPU Manager, the same telemetry/health/diagnostics library NVIDIA uses for cluster-scale GPU fleet management, running here against a single GPU |
+| **DCGM Exporter** | Exposes live DCGM metrics as a Prometheus-scrapable HTTP endpoint |
+| **Prometheus** | Time-series database; scrapes, stores, and queries all historical metric data |
+| **Grafana** | Visualization and dashboarding layer; threshold evaluation and alerting UI |
+| **Docker Compose** | Orchestrates the full stack as a single reproducible deployment |
 
-Hardware: ASUS ROG Zephyrus G16 – NVIDIA GeForce RTX 5090
+**Hardware:** ASUS ROG Zephyrus G16 – NVIDIA GeForce RTX 5090
 
-### Dashboard Layout: 
-The dashboard is organized into two functional groupings rather than a flat list of panels:
+## Dashboard layout
 
-Performance
-Real-time compute behavior is what the GPU is doing right now, and how that’s trended over the session. 
+The dashboard is split into two functional groupings instead of a flat list of panels:
 
-Metric
-Panel Type
-Notes
-GPU Utilization
-Stat + Time series
-Live % alongside historical trend
-GPU Temperature
-Stat + Time series
-Threshold line at 85°C (thermal safety ceiling)
-Power Draw
-Stat + Time series
-Watts, live + historical
+### Performance
+Real-time compute behavior: what the GPU is doing right now, and how that's trended over the session.
+
+| Metric | Panel type | Notes |
+|---|---|---|
+| GPU Utilization | Stat + time series | Live % alongside historical trend |
+| GPU Temperature | Stat + time series | Threshold line at 85°C (thermal safety ceiling) |
+| Power Draw | Stat + time series | Watts, live + historical |
 
 ### Health / Capacity
-Structural GPU state relies on memory pressure and fault status.
-Metric
-Panel Type
-Notes
-HBM Memory Used
-Time series
-MB in active use
-HBM Memory Free
-Time series
-MB available
-XID Errors
-Time series
-Hardware fault indicator (see below)
+Structural GPU state: memory pressure and fault status.
 
+| Metric | Panel type | Notes |
+|---|---|---|
+| HBM Memory Used | Time series | MB in active use |
+| HBM Memory Free | Time series | MB available |
+| XID Errors | Time series | Hardware fault indicator (see below) |
 
-XID Errors read a flat line a 0: XID errors are NVIDIA’s hardware/driver-level fault codes (ECC errors, XID reset, etc.). A flat line at zero is not a broken panel, it is actually the intended healthy state. This panel exists to catch anomalies, not to display constant activity; its value is in what it would show if something went wrong.
+**Reading a flat line at 0 on XID Errors:** XID errors are NVIDIA's hardware/driver-level fault codes (ECC errors, XID resets, etc). A flat line at zero isn't a broken panel, it's the intended healthy state. This panel exists to catch anomalies, not to display constant activity. Its value is in what it would show if something went wrong.
 
-### Observing Load in Practice
+## Observing load in practice
 
-The dashboard was captured while running multiple CUDA kernel workloads alongside 4K video playback, producing visible, correlated spikes across utilization, temperature, and power draw demonstrating that the pipeline captures real hardware response to compute load, not static/idle data. 
+The dashboard was captured while running multiple CUDA kernel workloads alongside 4K video playback, producing visible, correlated spikes across utilization, temperature, and power draw. That's the pipeline capturing real hardware response to compute load, not static or idle data.
 
-### Getting Started
+## Getting started
 
 ```bash
 git clone https://github.com/Dre1896/rtx5090-gpu-observability.git
@@ -110,19 +92,26 @@ Once running:
 - Grafana: `http://localhost:3000`
 - DCGM Exporter metrics endpoint: `http://localhost:9400/metrics`
 
-The dashboard (`grafana/dashboards/rtx5090-gpu-observability.json`) is auto-provisioned on startup via `grafana/provisioning/` — no manual dashboard import needed.
+The dashboard isn't auto-provisioned yet, so import it manually the first time:
+1. Open Grafana at `http://localhost:3000`
+2. Add Prometheus as a data source (URL: `http://prometheus:9090`)
+3. Go to **Dashboards → New → Import**
+4. Upload `grafana/grafana-dashboard.json` from this repo
 
-Requirements: NVIDIA GPU with current drivers, NVIDIA Container Toolkit, Docker + Docker Compose.
+**Requirements:** NVIDIA GPU with current drivers, NVIDIA Container Toolkit, Docker + Docker Compose.
 
-### Design Notes
-Thresholds over raw plotting: The 85°C threshold isn’t cosmetic, it encodes ana actual thermal safety boundary, so the dashboard tells you when to be concerned, not just what the number is.
-Stat + time series pairing: Each core performance metric gets both an at-a-glance current value and a trend, because “what is it right now” and “how did it get here” are different questions that both matter operationally. 
-Portability by design: The Docker Compose architecture means this isn’t a one-off script tied to one machine. It’s a deployable observability pattern that generalizes to any NVIDIA GPU environment, single-node or fleet
+## Design notes
 
-### Future Improvements
-Grafana annotations marking workload start/stop events for precise event correlation
-Alertmanager integration for threshold-breach notifications 
-Multi-GPU support for validating fleet-scale behavior beyond a single node
+- **Thresholds over raw plotting:** The 85°C threshold isn't cosmetic, it encodes an actual thermal safety boundary, so the dashboard tells you when to be concerned, not just what the number is.
+- **Stat + time series pairing:** Each core performance metric gets both an at-a-glance current value and a trend, because "what is it right now" and "how did it get here" are different questions that both matter operationally.
+- **Portability by design:** The Docker Compose architecture means this isn't a one-off script tied to one machine. It's a deployable observability pattern that generalizes to any NVIDIA GPU environment, single-node or fleet.
 
-### License
-MIT – see LICENSE.
+## Future improvements
+
+- Auto-provision the dashboard on startup via `grafana/provisioning/`, so no manual import step is needed
+- Grafana annotations marking workload start/stop events for precise event correlation
+- Alertmanager integration for threshold-breach notifications
+- Multi-GPU support for validating fleet-scale behavior beyond a single node
+
+## License
+MIT, see LICENSE.
