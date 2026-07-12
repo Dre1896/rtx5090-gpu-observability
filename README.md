@@ -7,7 +7,7 @@
 
 A containerized GPU telemetry pipeline built on the same monitoring primitives that NVIDIA uses at datacenter scale. DCGM, Prometheus, and Grafana were deployed against my single workstation GPU to demonstrate real-time observability, threshold-based health monitoring, and correlated performance analysis under active compute load. Gaps in the timeline reflect periods when the Docker stack was stopped between sessions. Prometheus only records data while actively scraping.
 
-ADD IMAGE
+![RTX 5090 GPU Observability Dashboard](assets/full_dashboard.png)
 
 ## Why This Exists
 
@@ -20,7 +20,7 @@ Runs identically on any machine with an NVIDIA GPU, via Docker, with zero manual
 
 ## Architecture 
 
-ADD IMAGE
+![GPU Observability Architecture](assets/gpu_observability_architecture.png)
 
 NVIDIA GPU (RTX 5090)
        │
@@ -92,8 +92,6 @@ Hardware fault indicator (see below)
 XID Errors read a flat line a 0: XID errors are NVIDIA’s hardware/driver-level fault codes (ECC errors, XID reset, etc.). A flat line at zero is not a broken panel, it is actually the intended healthy state. This panel exists to catch anomalies, not to display constant activity; its value is in what it would show if something went wrong.
 
 Observing Load in Practice
-
-ADD IMAGE
 
 The dashboard was captured while running multiple CUDA kernel workloads alongside 4K video playback, producing visible, correlated spikes across utilization, temperature, and power draw demonstrating that the pipeline captures real hardware response to compute load, not static/idle data. 
 
