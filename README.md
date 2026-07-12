@@ -22,6 +22,7 @@ Runs identically on any machine with an NVIDIA GPU, via Docker, with zero manual
 
 ![GPU Observability Architecture](assets/gpu_observability_architecture.png)
 
+```
 NVIDIA GPU (RTX 5090)
        │
        ▼
@@ -32,6 +33,7 @@ Prometheus              — scrapes, timestamps, and stores metrics as a queryab
        │  (PromQL)
        ▼
 Grafana                 — queries Prometheus, renders dashboards, evaluates thresholds
+```
 
 Why this layering matters: DCGM Exporter is stateless so it reports the instantaneous value of a metric and nothing else. Prometheus is what introduces history: on every scrape, it timestamps and persists the value, which is what allows Grafana to render a trend line instead of a single flat number. Grafana itself holds none of the data, it’s a pure query-and-render layer on top of Prometheus.
 
@@ -73,7 +75,7 @@ Power Draw
 Stat + Time series
 Watts, live + historical
 
-Health / Capacity
+### Health / Capacity
 Structural GPU state relies on memory pressure and fault status.
 Metric
 Panel Type
@@ -91,35 +93,36 @@ Hardware fault indicator (see below)
 
 XID Errors read a flat line a 0: XID errors are NVIDIA’s hardware/driver-level fault codes (ECC errors, XID reset, etc.). A flat line at zero is not a broken panel, it is actually the intended healthy state. This panel exists to catch anomalies, not to display constant activity; its value is in what it would show if something went wrong.
 
-Observing Load in Practice
+### Observing Load in Practice
 
 The dashboard was captured while running multiple CUDA kernel workloads alongside 4K video playback, producing visible, correlated spikes across utilization, temperature, and power draw demonstrating that the pipeline captures real hardware response to compute load, not static/idle data. 
 
-Getting Started
+### Getting Started
 
-bash
+```bash
 git clone https://github.com/Dre1896/rtx5090-gpu-observability.git
 cd rtx5090-gpu-observability
 docker-compose up -d
+```
 
 Once running:
-Prometheus: http://localhost:9090
-Grafana: http://localhost:3000
-DCGM Exporter metrics endpoint: http://localhost:9400/metrics
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+- DCGM Exporter metrics endpoint: `http://localhost:9400/metrics`
 
-The dashboard (grafana/dashboards/rtx5090-gpu-observability.json) is auto-provisioned on startup via grafana/provisioning/ so no manual dashboard import is really needed.
+The dashboard (`grafana/dashboards/rtx5090-gpu-observability.json`) is auto-provisioned on startup via `grafana/provisioning/` — no manual dashboard import needed.
 
 Requirements: NVIDIA GPU with current drivers, NVIDIA Container Toolkit, Docker + Docker Compose.
 
-Design Notes
+### Design Notes
 Thresholds over raw plotting: The 85°C threshold isn’t cosmetic, it encodes ana actual thermal safety boundary, so the dashboard tells you when to be concerned, not just what the number is.
 Stat + time series pairing: Each core performance metric gets both an at-a-glance current value and a trend, because “what is it right now” and “how did it get here” are different questions that both matter operationally. 
 Portability by design: The Docker Compose architecture means this isn’t a one-off script tied to one machine. It’s a deployable observability pattern that generalizes to any NVIDIA GPU environment, single-node or fleet
 
-Future Improvements
+### Future Improvements
 Grafana annotations marking workload start/stop events for precise event correlation
 Alertmanager integration for threshold-breach notifications 
 Multi-GPU support for validating fleet-scale behavior beyond a single node
 
-License
+### License
 MIT – see LICENSE.
